@@ -29,6 +29,7 @@ void HistogramOnGrid::registerKeywords( Keywords& keys ){
   GridVessel::registerKeywords( keys );
   keys.add("compulsory","KERNEL","the type of kernel to use");
   keys.add("compulsory","BANDWIDTH","the bandwidths");
+  keys.add("compulsory","CONCENTRATION","the concentration parameter for Von Mises-Fisher distributions");
 }
 
 HistogramOnGrid::HistogramOnGrid( const vesselbase::VesselOptions& da ):
@@ -38,12 +39,17 @@ addOneKernelAtATime(false),
 bandwidths(dimension),
 discrete(false)
 {
-  parse("KERNEL",kerneltype); 
-  if( kerneltype=="discrete" || kerneltype=="DISCRETE" ){
-      discrete=true; setNoDerivatives();
+  if( getType()=="flat" ){
+      parse("KERNEL",kerneltype); 
+      if( kerneltype=="discrete" || kerneltype=="DISCRETE" ){
+          discrete=true; setNoDerivatives();
+      } else {
+          parseVector("BANDWIDTH",bandwidths);
+      }
   } else {
-      parseVector("BANDWIDTH",bandwidths);
-  }
+      parse("CONCENTRATION",von_misses_concentration);
+      von_misses_norm = von_misses_concentration / ( 4*pi*sinh( von_misses_concentration ) );  
+  } 
 }
 
 bool HistogramOnGrid::noDiscreteKernels() const {
@@ -61,18 +67,24 @@ void HistogramOnGrid::setBounds( const std::vector<std::string>& smin, const std
           if( pbc[i] && 2*support[i]>getGridExtent(i) ) error("bandwidth is too large for periodic grid");
           neigh_tot *= (2*nneigh[i]+1); 
       } 
-  }
+  } 
 }
 
 KernelFunctions* HistogramOnGrid::getKernelAndNeighbors( std::vector<double>& point, unsigned& num_neigh, std::vector<unsigned>& neighbors ) const {
-  if( discrete ){ 
+  if( discrete ){
+     plumed_assert( getType()=="flat" );
      num_neigh=1; for(unsigned i=0;i<dimension;++i) point[i] += 0.5*dx[i];
      neighbors[0] = getIndex( point ); return NULL;
-  } else {
+  } else if( getType()=="flat" ){
      KernelFunctions* kernel = new KernelFunctions( point, bandwidths, kerneltype, false, 1.0, true ); 
      getNeighbors( kernel->getCenter(), nneigh, num_neigh, neighbors ); 
      return kernel;
+  } else {
+     num_neigh = getNumberOfPoints(); 
+     if( neighbors.size()!=getNumberOfPoints() ) neighbors.resize( getNumberOfPoints() );
+     for(unsigned i=0;i<getNumberOfPoints();++i) neighbors[i]=i;
   }
+  return NULL;
 }
 
 std::vector<Value*> HistogramOnGrid::getVectorOfValues() const {
@@ -101,7 +113,7 @@ void HistogramOnGrid::calculate( const unsigned& current, MultiValue& myvals, st
      std::vector<double> der( dimension ); 
      KernelFunctions* kernel=getKernelAndNeighbors( point, num_neigh, neighbors );
 
-     if( !kernel ){
+     if( !kernel && getType()=="flat" ){
          plumed_dbg_assert( num_neigh==1 );
          accumulate( neighbors[0], weight, 1.0, der, buffer );
      } else {
@@ -114,8 +126,17 @@ void HistogramOnGrid::calculate( const unsigned& current, MultiValue& myvals, st
              unsigned ineigh=neighbors[i];
              if( inactive( ineigh ) ) continue ;
              getGridPointCoordinates( ineigh, xx );
-             for(unsigned j=0;j<dimension;++j) vv[j]->set(xx[j]);
-             newval = kernel->evaluate( vv, der, true ); 
+             if( kernel ){
+                  for(unsigned j=0;j<dimension;++j) vv[j]->set(xx[j]);
+                  newval = kernel->evaluate( vv, der, true ); 
+             } else {
+                  // Evalulate dot product
+                  double dot=0; for(unsigned j=0;j<dimension;++j){ dot+=xx[j]*point[j]; der[j]=xx[j]; }
+                  // Von misses distribution for concentration parameter
+                  newval = von_misses_norm*exp( von_misses_concentration*dot );
+                  // And final derivatives
+                  for(unsigned j=0;j<dimension;++j) der[j] *= von_misses_concentration*newval;
+             } 
              accumulate( ineigh, weight, newval, der, buffer );
              if( wasForced() ){  
                  accumulateForce( ineigh, weight, der, intforce ); 
@@ -123,14 +144,15 @@ void HistogramOnGrid::calculate( const unsigned& current, MultiValue& myvals, st
              } 
          }
          if( wasForced() ){
+             // Minus sign for kernel here as we are taking derivative with respect to position of center of 
+             // kernel NOT derivative wrt to grid point
+             double pref = 1; if( kernel ) pref = -1;
              unsigned nder = getAction()->getNumberOfDerivatives();
              unsigned gridbuf = getNumberOfBufferPoints()*getNumberOfQuantities(); 
              for(unsigned j=0;j<dimension;++j){
                  for(unsigned k=0;k<myvals.getNumberActive();++k){
-                     // Minus sign here as we are taking derivative with respect to position of center of kernel NOT derivative wrt to
-                     // grid point
                      unsigned kder=myvals.getActiveIndex(k); 
-                     buffer[ bufstart + gridbuf + kder ] -= intforce[j]*myvals.getDerivative( j+1, kder ); 
+                     buffer[ bufstart + gridbuf + kder ] += pref*intforce[j]*myvals.getDerivative( j+1, kder ); 
                  }
              }
              // Accumulate the sum of all the weights
