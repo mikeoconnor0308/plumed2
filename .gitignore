@@ -100,3 +100,5 @@ src/config/Config\.cpp
 src/config/ConfigInstall\.cpp
 
 src/config/version\.h
+
+src/imd/imdapi\.tar\.gz

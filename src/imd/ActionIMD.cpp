@@ -92,11 +92,13 @@ PLUMED_REGISTER_ACTION(IMD,"IMD")
 
 void IMD::registerKeywords( Keywords& keys ){
   keys.addFlag("WAIT",false,"");
-  keys.addFlag("NOWAIT",true,"");
+  keys.addFlag("NOWAIT",false,"");
   keys.addFlag("WRAP",false,"");
   keys.add("compulsory","HOST","");
   keys.add("compulsory","PORT","");
-  keys.add("compulsory","FSCALE","1.0","");
+  keys.add("compulsory","FSCALE","1.0","");  
+  //@review moc Added this to fix problem with STRIDE not being found on initialisation
+  keys.add("compulsory","STRIDE","1","the frequency with which the forces should be output");
 }
 
 IMD::IMD(const ActionOptions& ao):
@@ -124,7 +126,7 @@ IMD::IMD(const ActionOptions& ao):
   parseFlag("WAIT",wait);
   bool nowait=false;
   parseFlag("NOWAIT",nowait);
-  if(nowait)wait=false;
+  //if(nowait)wait=false;
   parseFlag("WRAP",wrap);
   parse("PORT",port);
   parse("HOST",host);
