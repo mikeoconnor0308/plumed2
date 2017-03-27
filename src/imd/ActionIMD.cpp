@@ -177,11 +177,12 @@ void IMD::connect()
         int length;
         if (clientsock)
         {
-          if (vmdsock_selread(clientsock, 0) != 1 ||
-              imd_recv_header(clientsock, &length) != IMD_GO)
-          {
-            clientsock = NULL;
-          }
+            int x = vmdsock_selread(clientsock, 0);
+            IMDType type = imd_recv_header(clientsock, &length); 
+
+            if (x != 1 || type != IMD_GO) {
+              clientsock = NULL;
+            }
         }
       }
     } while (wait && clientsock == NULL);
@@ -302,6 +303,8 @@ void IMD::calculate()
       coord[3 * i + 1] = static_cast<float>((pos[1] * scale));
       coord[3 * i + 2] = static_cast<float>((pos[2] * scale));
     }
+    IMDEnergies energies;
+    imd_send_energies(clientsock, &energies);
     imd_send_fcoords(clientsock, natoms, &coord[0]);
   }
 }
