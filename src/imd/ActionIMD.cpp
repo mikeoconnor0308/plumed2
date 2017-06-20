@@ -26,7 +26,7 @@
 #include "../core/Atoms.h"
 #include "../tools/Exception.h"
 #include <unistd.h>
-
+#include "Clock.h"
 extern "C" {
 #include "vmdsock.h"
 #include "imd.h"
@@ -52,6 +52,9 @@ IMD HOST=pippo PORT=1112
 \verbatim
 # listen to port 1112 of localhost and run only when connected
 IMD PORT=1112 WAIT
+\verbatim
+# listen to port 1112 of localhost and throttle the MD to run at 30 frames per second.
+IMD PORT=1112 FPS=30
 \endverbatim
 
 \attention
@@ -76,9 +79,11 @@ class IMD : public ActionAtomistic,
   int natoms;
   int transferRate;
   double fscale;
+  int fps;
   void connect();
   void receive();
   void sendCoordinates();
+  Clock clock; 
 
 public:
   static void registerKeywords(Keywords &keys);
@@ -100,6 +105,8 @@ void IMD::registerKeywords(Keywords &keys)
   keys.add("compulsory", "FSCALE", "1.0", "");
   //@review moc Added this to fix problem with STRIDE not being found on initialisation
   keys.add("compulsory", "STRIDE", "1", "the frequency with which the forces should be output");
+  keys.add("optional","FPS", "The target frames per second to throttle the MD to.");
+ 
 }
 
 IMD::IMD(const ActionOptions &ao) : Action(ao),
@@ -113,7 +120,8 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
                                     clientsock(NULL),
                                     connected(false),
                                     transferRate(100),
-                                    fscale(1.0)
+                                    fscale(1.0),
+                                    fps(30)
 {
   natoms = plumed.getAtoms().getNatoms();
 
@@ -132,11 +140,12 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
   parse("PORT", port);
   parse("HOST", host);
   parse("FSCALE", fscale);
-
+  parse("FPS", fps);
   checkRead();
 
   log.printf("  with host %s\n", host.c_str());
   log.printf("  with port %d\n", port);
+  log.printf("  at %d frames per second\n", fps);
   if (wait)
     log.printf("  waiting for a connection\n");
   else
@@ -169,6 +178,7 @@ void IMD::connect()
       if (vmdsock_selread(sock, 00) > 0)
       {
         clientsock = vmdsock_accept(sock);
+        fprintf(stderr, "Performing handshake...\n");
         if (imd_handshake(clientsock))
         {
           clientsock = NULL;
@@ -183,6 +193,10 @@ void IMD::connect()
             if (x != 1 || type != IMD_GO) {
               clientsock = NULL;
             }
+            else
+            {
+              clock.Start();
+            }            
         }
       }
     } while (wait && clientsock == NULL);
@@ -212,7 +226,7 @@ void IMD::receive()
     while (vmdsock_selread(clientsock, 0) > 0)
     {
       type = imd_recv_header(clientsock, &length);
-      if (type == IMD_MDCOMM)
+      if (length > 0 && type == IMD_MDCOMM)
       {
         int32 *vmd_atoms = new int32[length];
         float *vmd_forces = new float[3 * length];
@@ -306,6 +320,11 @@ void IMD::calculate()
     IMDEnergies energies;
     imd_send_energies(clientsock, &energies);
     imd_send_fcoords(clientsock, natoms, &coord[0]);
+
+    //Here we spin the clock until we reach the target fps.
+    float frameTimeStep = 1.0f / fps;
+    clock.SpinTill(frameTimeStep);
+    clock.Update();
   }
 }
 
@@ -326,4 +345,6 @@ void IMD::apply()
   connect();
   receive();
 }
+
+
 }

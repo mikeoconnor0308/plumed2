@@ -5,7 +5,7 @@ endif
 
 all: libimd.$(SOEXT)
 
-libimd.$(SOEXT): imd.o vmdsock.o ActionIMD.o
+libimd.$(SOEXT): imd.o vmdsock.o Clock.o ActionIMD.o
 	$(LDSO) -o $@ $^ # -lnsl
 
 vmdsock.c imd.c vmdsock.h imd.h: imdapi.tar.gz
