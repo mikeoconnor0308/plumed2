@@ -1,4 +1,7 @@
 #include "Clock.h"
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 Clock::Clock()
 {
@@ -10,7 +13,7 @@ Clock::Clock()
 ///</summary>
 void Clock::Start()
 {
-    clock_t lastUpdate = clock();
+    lastUpdate = clock();
     isRunning = true;
 }
 
@@ -27,6 +30,7 @@ float Clock::Update()
         lastUpdate = clock();
         result = (float)(lastUpdate - last) / frequency;
     }
+    return result;
 }
 
 ///<summary>
@@ -41,7 +45,6 @@ void Clock::SpinTill(float value)
     }
 
     clock_t count = lastUpdate;
-
     while (accumulator < value)
     {
         clock_t last = count;
