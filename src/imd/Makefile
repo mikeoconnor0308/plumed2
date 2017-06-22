@@ -8,17 +8,14 @@ all: libimd.$(SOEXT)
 libimd.$(SOEXT): imd.o vmdsock.o Clock.o ActionIMD.o
 	$(LDSO) -o $@ $^ # -lnsl
 
-vmdsock.c imd.c vmdsock.h imd.h: imdapi.tar.gz
-	tar xzOf imdapi.tar.gz imdapi/$@ > $@
+# copy imd-api to biuld directory, not great but workable and matches previous style.
+vmdsock.c imd.cpp vmdsock.h imd.h: 
+	cp -v vmd-imd-api/vmd-imd/$@ $@
 
 vmdsock.o imd.o: vmdsock.h imd.h
 
-imdapi.tar.gz:
-	wget http://www.ks.uiuc.edu/Research/vmd/imd/code/imdapi.tar.gz
-
-
 clean:
-	rm -fr imdapi.tar.gz *.c *.h *.$(SOEXT) *.o
+	rm -fr imd.cpp *.c imd.h vmdsock.h *.$(SOEXT) *.o
 
 obj: all
 
