@@ -9,13 +9,13 @@ libimd.$(SOEXT): imd.o vmdsock.o Clock.o ActionIMD.o
 	$(LDSO) -o $@ $^ # -lnsl
 
 # copy imd-api to biuld directory, not great but workable and matches previous style.
-vmdsock.c imd.cpp vmdsock.h imd.h: 
+vmdsock.c imd.c vmdsock.h imd.h: 
 	cp -v vmd-imd-api/vmd-imd/$@ $@
 
 vmdsock.o imd.o: vmdsock.h imd.h
 
 clean:
-	rm -fr imd.cpp *.c imd.h vmdsock.h *.$(SOEXT) *.o
+	rm -fr *.c imd.h vmdsock.h *.$(SOEXT) *.o
 
 obj: all
 
