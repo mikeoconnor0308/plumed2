@@ -178,7 +178,7 @@ void IMD::connect()
       if (vmdsock_selread(sock, 00) > 0)
       {
         clientsock = vmdsock_accept(sock);
-        fprintf(stderr, "Performing handshake...\n");
+        log.printf("Performing handshake...\n");
         if (imd_handshake(clientsock))
         {
           clientsock = NULL;
@@ -195,6 +195,7 @@ void IMD::connect()
             }
             else
             {
+              log.printf("Connected to client!\n");
               clock.Start();
             }            
         }
@@ -243,8 +244,12 @@ void IMD::receive()
         comm.Bcast(&itype, 1, 0);
         comm.Bcast(&forces[0], forces.size(), 0);
       }
-      else if (type == IMD_DISCONNECT)
+      else if (type == IMD_DISCONNECT || type == IMD_IOERROR)
       {
+        if(type == IMD_IOERROR)
+          log.printf("IMD: IOError, will disconnect client and try to reconnect...\n");
+        else
+          log.printf("IMD: Client disconnected.");
         vmdsock_destroy(clientsock);
         clientsock = NULL;
         for (unsigned i = 0; i < forces.size(); i++)
