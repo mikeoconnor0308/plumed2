@@ -1,0 +1,3 @@
+[submodule "src/imd/vmd-imd-api"]
+	path = src/imd/vmd-imd-api
+	url = https://mikeoconnor0308@bitbucket.org/glowackigroup/vmd-imd-api.git
