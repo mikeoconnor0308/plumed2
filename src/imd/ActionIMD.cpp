@@ -83,6 +83,7 @@ class IMD : public ActionAtomistic,
   void connect();
   void receive();
   void sendCoordinates();
+  void sendPBC();
   Clock clock; 
 
 public:
@@ -324,6 +325,8 @@ void IMD::calculate()
     }
     IMDEnergies energies;
     imd_send_energies(clientsock, &energies);
+    //TODO no need to send box every frame. 
+    sendPBC();
     imd_send_fcoords(clientsock, natoms, &coord[0]);
 
     //Here we spin the clock until we reach the target fps.
@@ -333,6 +336,19 @@ void IMD::calculate()
   }
 }
 
+void IMD::sendPBC()
+{
+  Tensor box = getBox();
+  float pbcBox[9];
+  for(int i =0; i < 3; i++)
+  {
+    for(int j=0; j < 3; j++)
+    {
+      pbcBox[3*i + j] = box[i][j];
+    }
+  }
+  imd_send_periodic_box(clientsock, 3, &pbcBox[0]);
+}
 void IMD::apply()
 {
 
