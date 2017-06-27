@@ -107,7 +107,7 @@ void IMD::registerKeywords(Keywords &keys)
   //@review moc Added this to fix problem with STRIDE not being found on initialisation
   keys.add("compulsory", "STRIDE", "1", "the frequency with which the forces should be output");
   keys.add("optional","FPS", "The target frames per second to throttle the MD to.");
- 
+  keys.add("optional","TRATE", "The rate at which frames will be transmitted." );
 }
 
 IMD::IMD(const ActionOptions &ao) : Action(ao),
@@ -142,6 +142,7 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
   parse("HOST", host);
   parse("FSCALE", fscale);
   parse("FPS", fps);
+  parse("TRATE", transferRate);
   checkRead();
 
   log.printf("  with host %s\n", host.c_str());
