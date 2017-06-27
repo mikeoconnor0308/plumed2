@@ -331,9 +331,9 @@ void IMD::calculate()
     imd_send_fcoords(clientsock, natoms, &coord[0]);
 
     //Here we spin the clock until we reach the target fps.
-    float frameTimeStep = 1.0f / fps;
-    clock.SpinTill(frameTimeStep);
-    clock.Update();
+    //float frameTimeStep = 1.0f / fps;
+    //clock.SpinTill(frameTimeStep);
+    //clock.Update();
   }
 }
 
