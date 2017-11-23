@@ -82,8 +82,10 @@ class IMD : public ActionAtomistic,
   int fps;
   void connect();
   void receive();
+  void processPaused();
   void sendCoordinates();
   void sendPBC();
+  bool paused;
   Clock clock; 
 
 public:
@@ -132,7 +134,6 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
   requestAtoms(index);
   coord.resize(natoms * 3, float(0.0));
   forces.resize(natoms * 3, 0.0);
-
   parseFlag("WAIT", wait);
   bool nowait = false;
   parseFlag("NOWAIT", nowait);
@@ -157,7 +158,7 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
   else
     log.printf("  not wrapping atoms\n");
   log.printf("  WMD forces will be scaled by %f\n", fscale);
-
+  log.printf(" Frames will be transmitted every %d steps", transferRate);
   if (comm.Get_rank() == 0)
   {
     vmdsock_init();
@@ -174,7 +175,7 @@ void IMD::connect()
   if (comm.Get_rank() == 0)
   {
     if (wait && clientsock == NULL)
-      fprintf(stderr, "Waiting for IMD connection on %s:%d...\n", host.c_str(), port);
+      fprintf(stdout, "Waiting for IMD connection on %s:%d.\n", host.c_str(), port);
     do
     {
       if (vmdsock_selread(sock, 00) > 0)
@@ -226,7 +227,7 @@ void IMD::receive()
     IMDType type;
     int length;
     int itype;
-    while (vmdsock_selread(clientsock, 0) > 0)
+    while (paused || vmdsock_selread(clientsock, 0) > 0)
     {
       type = imd_recv_header(clientsock, &length);
       if (length > 0 && type == IMD_MDCOMM)
@@ -248,6 +249,11 @@ void IMD::receive()
       }
       else if (type == IMD_DISCONNECT || type == IMD_IOERROR)
       {
+        if(paused)
+        {
+          paused = false; 
+          fprintf(stdout, "IMD: Client diconnected or an error, will unpause simulation and await reconnection.");
+        }
         if(type == IMD_IOERROR)
           log.printf("IMD: IOError, will disconnect client and try to reconnect...\n");
         else
@@ -271,9 +277,23 @@ void IMD::receive()
         comm.Bcast(&itype, 1, 0);
         comm.Bcast(&transferRate, 1, 0);
       }
+      else if (type == IMD_PAUSE)
+      {
+        paused = true;
+        fprintf(stdout, "IMD: Received paused signal, will block until Go signal received.");
+      }
+      else if (type == IMD_GO)
+      {
+        paused = false; 
+        fprintf(stdout, "IMD: Go signal received, resuming MD.");
+      }      
       else if (type == IMD_KILL)
       {
-        log.printf("IMD: killing simulation\n");
+        vmdsock_shutdown(clientsock);
+        vmdsock_destroy(clientsock);
+        vmdsock_shutdown(sock);
+        vmdsock_destroy(sock);
+        fprintf(stdout, "IMD: killing simulation\n");
         itype = 3;
         comm.Bcast(&itype, 1, 0);
         plumed.exit();
@@ -329,11 +349,6 @@ void IMD::calculate()
     //TODO no need to send box every frame. 
     sendPBC();
     imd_send_fcoords(clientsock, natoms, &coord[0]);
-
-    //Here we spin the clock until we reach the target fps.
-    //float frameTimeStep = 1.0f / fps;
-    //clock.SpinTill(frameTimeStep);
-    //clock.Update();
   }
 }
 
