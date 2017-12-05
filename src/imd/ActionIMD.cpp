@@ -53,12 +53,12 @@ IMD HOST=pippo PORT=1112
 # listen to port 1112 of localhost and run only when connected
 IMD PORT=1112 WAIT
 \verbatim
-# listen to port 1112 of localhost and throttle the MD to run at 30 frames per second.
-IMD PORT=1112 FPS=30
+# listen to port 1112 of localhost and only send the first 1000 atoms.
+IMD PORT=1112 ATOMCOUNT=1000
 \endverbatim
 
 \attention
-The IMB object only works if the IMD routines have been downloaded
+The IMD object only works if the IMD routines have been downloaded
 and properly linked with PLUMED
 
 */
@@ -78,8 +78,8 @@ class IMD : public ActionAtomistic,
   std::vector<double> forces;
   int natoms;
   int transferRate;
+  int natomsToTransmit;
   double fscale;
-  int fps;
   void connect();
   void receive();
   void processPaused();
@@ -108,8 +108,8 @@ void IMD::registerKeywords(Keywords &keys)
   keys.add("compulsory", "FSCALE", "1.0", "");
   //@review moc Added this to fix problem with STRIDE not being found on initialisation
   keys.add("compulsory", "STRIDE", "1", "the frequency with which the forces should be output");
-  keys.add("optional","FPS", "The target frames per second to throttle the MD to.");
   keys.add("optional","TRATE", "The rate at which frames will be transmitted." );
+  keys.add("optional","ATOMCOUNT", "The number of atoms to transmit to the client.");
 }
 
 IMD::IMD(const ActionOptions &ao) : Action(ao),
@@ -124,7 +124,7 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
                                     connected(false),
                                     transferRate(100),
                                     fscale(1.0),
-                                    fps(30)
+                                    natomsToTransmit(-1)                                    
 {
   natoms = plumed.getAtoms().getNatoms();
 
@@ -142,13 +142,12 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
   parse("PORT", port);
   parse("HOST", host);
   parse("FSCALE", fscale);
-  parse("FPS", fps);
   parse("TRATE", transferRate);
+  parse("ATOMCOUNT", natomsToTransmit);
   checkRead();
 
   log.printf("  with host %s\n", host.c_str());
   log.printf("  with port %d\n", port);
-  log.printf("  at %d frames per second\n", fps);
   if (wait)
     log.printf("  waiting for a connection\n");
   else
@@ -157,7 +156,17 @@ IMD::IMD(const ActionOptions &ao) : Action(ao),
     log.printf("  wrapping atoms\n");
   else
     log.printf("  not wrapping atoms\n");
-  log.printf("  WMD forces will be scaled by %f\n", fscale);
+  if (natomsToTransmit == -1)
+  {
+    natomsToTransmit = natoms;
+    log.printf(" Will transmit all %d atoms in the simulation", natomsToTransmit);
+  }
+  else
+  {
+    log.printf(" Will transmit the first %d atoms in the simulation", natomsToTransmit);
+  }
+    
+  log.printf("  VMD forces will be scaled by %f\n", fscale);
   log.printf(" Frames will be transmitted every %d steps", transferRate);
   if (comm.Get_rank() == 0)
   {
@@ -335,7 +344,7 @@ void IMD::calculate()
   {
     double scale = 10.0 * plumed.getAtoms().getUnits().getLength();
     Vector ref;
-    for (int i = 0; i < natoms; i++)
+    for (int i = 0; i < natoms && i < natomsToTransmit; i++)
     {
       Vector pos = getPosition(i);
       if (wrap)
