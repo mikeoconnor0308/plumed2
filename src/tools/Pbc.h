@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2016 The plumed team
+   Copyright (c) 2011-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -27,7 +27,7 @@
 #include <vector>
 #include <cstddef>
 
-namespace PLMD{
+namespace PLMD {
 
 /*
 Tool to deal with periodic boundary conditions.
@@ -35,7 +35,7 @@ Tool to deal with periodic boundary conditions.
 This class is useful to apply periodic boundary conditions on interatomic
 distances. It stores privately information about reduced lattice vectors
 */
-class Pbc{
+class Pbc {
 /// Type of box
   enum {unset,orthorombic,generic} type;
 /// Box
@@ -63,8 +63,6 @@ class Pbc{
 /// a distance vector.
   void buildShifts(std::vector<Vector> shifts[2][2][2])const;
 public:
-/// Perform some check. Useful for debugging.
-  static void test();
 /// Constructor
   Pbc();
 /// Compute modulo of (v2-v1), using or not pbc depending on bool pbc.
@@ -100,12 +98,12 @@ public:
 };
 
 inline
-Vector Pbc::distance(const Vector& v1,const Vector& v2)const{
+Vector Pbc::distance(const Vector& v1,const Vector& v2)const {
   return distance(v1,v2,NULL);
 }
 
 inline
-bool Pbc::isSet()const{
+bool Pbc::isSet()const {
   return type!=unset;
 }
 

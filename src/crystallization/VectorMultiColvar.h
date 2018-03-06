@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2013-2016 The plumed team
+   Copyright (c) 2013-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -30,8 +30,8 @@ namespace PLMD {
 namespace crystallization {
 
 class VectorMultiColvar : public multicolvar::MultiColvarBase {
-friend class OrientationSphere;
-friend class VolumeGradientBase;
+  friend class OrientationSphere;
+  friend class VolumeGradientBase;
 private:
 /// Are we storing the director of the vector of the vector
   bool store_director;
@@ -47,9 +47,9 @@ protected:
 public:
   static void registerKeywords( Keywords& keys );
   explicit VectorMultiColvar(const ActionOptions&);
-  ~VectorMultiColvar(){}
+  ~VectorMultiColvar() {}
 /// The norm of a vector is not periodic
-  virtual bool isPeriodic(){ return false; }
+  virtual bool isPeriodic() { return false; }
 /// Calculate the multicolvar
 //  double doCalculation( const unsigned& taskIndex, multicolvar::AtomValuePack& myatoms ) const ;
 /// This shouldn't do anything
@@ -65,13 +65,13 @@ public:
 ///  This makes sure we are not calculating the director when we do LocalAverage
   virtual void doNotCalculateDirector();
 /// This does normalizeing of vectors for storeDataVessel
-  virtual void normalizeVector( std::vector<double>& vals ) const ; 
-  virtual void normalizeVectorDerivatives( MultiValue& myvals ) const ;  
+  virtual void normalizeVector( std::vector<double>& vals ) const ;
+  virtual void normalizeVectorDerivatives( MultiValue& myvals ) const ;
 };
 
 inline
 unsigned VectorMultiColvar::getNumberOfComponentsInVector() const {
-  return ncomponents; 
+  return ncomponents;
 }
 
 inline

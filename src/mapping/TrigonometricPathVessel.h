@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2016 The plumed team
+   Copyright (c) 2016,2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -32,9 +32,9 @@ namespace PLMD {
 namespace mapping {
 
 class TrigonometricPathVessel : public vesselbase::StoreDataVessel {
-friend class AdaptivePath;
+  friend class AdaptivePath;
 private:
-  Value* sp; 
+  Value* sp;
   Value* zp;
   Mapping* mymap;
   double dx;
@@ -48,7 +48,7 @@ private:
 public:
   static void registerKeywords( Keywords& keys );
   static void reserveKeyword( Keywords& keys );
-  TrigonometricPathVessel( const vesselbase::VesselOptions& da );
+  explicit TrigonometricPathVessel( const vesselbase::VesselOptions& da );
   std::string description();
   void resize();
   void finish( const std::vector<double>& buffer );

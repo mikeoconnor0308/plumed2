@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2015,2016 The plumed team
+   Copyright (c) 2015-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -57,7 +57,7 @@ public:
   virtual unsigned getNumberOfDerivatives();
 ///  Get the number of rows/cols in the adjacency matrix vessel
   virtual unsigned getNumberOfNodes() const ;
-  bool isPeriodic(){ return false; }
+  bool isPeriodic() { return false; }
   virtual unsigned getNumberOfQuantities() const ;
 ///
   virtual AtomNumber getAbsoluteIndexOfCentralAtom(const unsigned& i) const ;
